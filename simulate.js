@@ -16,19 +16,36 @@
 	});
 
 	var User = require('./db/models/user-model');
-	var newUser = new User();
-	newUser.username = 'siffogh';
-	newUser.save(function(err){
-		if(err)
-		{
-			console.log('error');
-			throw err;
-		}
+	var Notification = require('./db/models/notification-model');
+	// var newUser = new User();
+	// newUser.username = 'siffogh';
+	// newUser.save(function(err){
+	// 	if(err)
+	// 	{
+	// 		console.log('error');
+	// 		throw err;
+	// 	}
 
-		else
-		{
-			console.log('inserted');
-			return (null,newUser);
-		}
+	// 	else
+	// 	{
+	// 		console.log('inserted');
+	// 		return (null,newUser);
+	// 	}
 
+	// });
+
+	User.findOne({'username': 'siffogh'}, function(err,user){
+		var notif = new Notification();
+		notif.date = new Date();
+		notif.content.text = 'The Bus is arriving in 5 min';
+		notif.content.img = 'arrive.jpg';
+		notif.save(function(err){
+			if(err)
+				throw err;
+		});
+		user.notifications.push(notif._id);
+		user.save(function(err){
+			if(err)
+				throw err;
+		});
 	});

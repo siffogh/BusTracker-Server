@@ -104,6 +104,38 @@ else
     
   });
   console.log("User Location Updated");
+})
+
+.get('/getNotifications',function(req,res){
+  User.findOne({'username': 'siffogh'}).populate('notifications').exec(function(err,user){
+
+    if(user)
+    {
+      console.log(user.username);
+      console.log(user.notifications[0].content.text);
+      res.header("Access-Control-Allow-Origin", "*");
+      res.json({notifications: user.notifications});
+    }
+
+  });
+})
+
+.get('/checkNotifications',function(req,res){
+  console.log('Updating checked notifications ...');
+  User.findOne({'username': 'siffogh'}).populate('notifications').exec(function(err,user){
+    if(user)
+    {
+      user.notifications.forEach(function(notification){
+        notification.checked = true;
+        notification.save(function(err){
+          if(err)
+            throw err;
+        });
+      });
+
+      res.send('done updating');
+    }
+  });
 });
 
 }

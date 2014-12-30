@@ -6,7 +6,8 @@ var notificationSchema = mongoose.Schema({
 	content: {
 		text: String,
 		img: String
-	}
+	},
+	checked: {type: Boolean, default: false}
 });
 
 module.exports = mongoose.model('Notification', notificationSchema);
