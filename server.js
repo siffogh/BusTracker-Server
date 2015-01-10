@@ -3,9 +3,7 @@
 ///*********************************************************************************///
 
 var express = require('express');
-var key = 'AIzaSyDNcANNVuMQChxW4XnQwqrPkeTipIBJY8c'; //Google Distance Matrix Server Key
 var app = express();
-var request = require('request');
 var bodyParser = require('body-parser');
 var http = require('http');
 var server = http.createServer(app);

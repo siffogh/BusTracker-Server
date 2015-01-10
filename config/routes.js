@@ -1,6 +1,8 @@
 module.exports = function(app){
-
+var request = require('request');
 var User = require('../db/models/user-model');
+var key = 'AIzaSyDNcANNVuMQChxW4XnQwqrPkeTipIBJY8c'; //Google Distance Matrix Server Key
+var Driver = require('../db/models/driver-model');
 var lat, longi;
 var destination = '25.3120502,55.4927023';
 var origin;
@@ -18,7 +20,8 @@ app.post('/post',function(req,res){
     console.log('lat:'+lat+' lng: '+longi);
     var str = 'https://maps.googleapis.com/maps/api/distancematrix/json?origins='+origin+'&destinations='+destination+'&mode=driving&key='+key;
     request(str,function(error,response,body){
-      console.log(JSON.parse(body).rows[0].elements[0].duration.text + ' to destination');
+      if(!error)
+        console.log(JSON.parse(body).rows[0].elements[0].duration.text + ' to destination');
     });
       res.header("Access-Control-Allow-Origin", "*");
       res.send('');
@@ -84,7 +87,7 @@ else
     if(user)
     {
       res.header("Access-Control-Allow-Origin", "*");
-      res.json({lat: user.settings.homeAddress.lat, lng: user.settings.homeAddress.lng, arr: user.settings.ttn});
+      res.json({currentLoc: user.settings.currentLocation, lat: user.settings.homeAddress.lat, lng: user.settings.homeAddress.lng, arr: user.settings.ttn});
     }
   });
  })
@@ -94,6 +97,17 @@ else
   User.findOne({'username': 'siffogh'}, function(err,user){
     if(user)
     {
+        if(JSON.parse(req.body.body).current == 't')
+        {
+          console.log('Current Location True');
+          user.settings.currentLocation = true;
+        }
+        
+        else
+          {
+            console.log('Current Location False');
+            user.settings.currentLocation = false;
+          }
         user.settings.homeAddress.lat = JSON.parse(req.body.body).lat;
         user.settings.homeAddress.lng = JSON.parse(req.body.body).lng;
         user.save(function(err){
@@ -134,6 +148,47 @@ else
       });
 
       res.send('done updating');
+    }
+  });
+})
+.post('/disableCurrentLoc',function(req,res){
+ console.log('Current Location False');
+  User.findOne({'username': 'siffogh'}, function(err,user){
+    if(user)
+    {
+        user.settings.currentLocation = false;
+        user.save(function(err){
+        if(err)
+          throw err;
+        });
+    }
+    
+  });
+})
+.get('/getBusInfo',function(req,res){
+  console.log('Getting Bus information ...');
+  Driver.findOne({_id: '54b1375d20fb86f80bdb32e1'}, function(err,driver){
+    if(driver)
+    {
+      console.log('found');
+      res.header("Access-Control-Allow-Origin", "*");
+      res.json({username: driver.username, fullName: driver.fullName, phone: driver.phone});
+    }
+  });
+ })
+.post('/updateBusInfo',function(req,res){
+  console.log('Updateing Bus information ...');
+  Driver.findOne({_id: '54b1375d20fb86f80bdb32e1'}, function(err,driver){
+    if(driver)
+    {
+      driver.username = JSON.parse(req.body.body).username;
+      driver.fullName = JSON.parse(req.body.body).fullName;
+      driver.phone = JSON.parse(req.body.body).phone;
+      driver.save(function(err){
+        if(err)
+          throw err;
+        console.log('Bus information updated');
+      });
     }
   });
 });

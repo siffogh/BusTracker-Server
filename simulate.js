@@ -15,8 +15,17 @@
 		console.log('Listening on 8001');
 	});
 
-	var User = require('./db/models/user-model');
-	var Notification = require('./db/models/notification-model');
+	var Driver = require('./db/models/driver-model');
+	var newDriver = new Driver();
+	newDriver.username = 'azizou';
+	newDriver.fullName = 'Abdelaziz Zarouni';
+	newDriver.phone = '+971552320493';
+	newDriver.save(function(err){
+		if(err)
+			throw err;
+	});
+	// var User = require('./db/models/user-model');
+	// var Notification = require('./db/models/notification-model');
 	// var newUser = new User();
 	// newUser.username = 'siffogh';
 	// newUser.save(function(err){
@@ -34,18 +43,18 @@
 
 	// });
 
-	User.findOne({'username': 'siffogh'}, function(err,user){
-		var notif = new Notification();
-		notif.date = new Date();
-		notif.content.text = 'The Bus is arriving in 5 min';
-		notif.content.img = 'arrive.jpg';
-		notif.save(function(err){
-			if(err)
-				throw err;
-		});
-		user.notifications.push(notif._id);
-		user.save(function(err){
-			if(err)
-				throw err;
-		});
-	});
+	// User.findOne({'username': 'siffogh'}, function(err,user){
+	// 	var notif = new Notification();
+	// 	notif.date = new Date();
+	// 	notif.content.text = 'The Bus is arriving in 5 min';
+	// 	notif.content.img = 'arrive.jpg';
+	// 	notif.save(function(err){
+	// 		if(err)
+	// 			throw err;
+	// 	});
+	// 	user.notifications.push(notif._id);
+	// 	user.save(function(err){
+	// 		if(err)
+	// 			throw err;
+	// 	});
+	// });
