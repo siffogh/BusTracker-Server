@@ -1,8 +1,10 @@
 module.exports = function(app){
-var request = require('request');
-var User = require('../db/models/user-model');
+  var request = require('request');
+  var User = require('../db/models/user-model');
 var key = 'AIzaSyDNcANNVuMQChxW4XnQwqrPkeTipIBJY8c'; //Google Distance Matrix Server Key
 var Driver = require('../db/models/driver-model');
+var Notification = require('../db/models/notification-model')
+var Trip = require('../db/models/trip-model');
 var lat, longi;
 var destination = '25.3120502,55.4927023';
 var origin;
@@ -23,8 +25,8 @@ app.post('/post',function(req,res){
       if(!error)
         console.log(JSON.parse(body).rows[0].elements[0].duration.text + ' to destination');
     });
-      res.header("Access-Control-Allow-Origin", "*");
-      res.send('');
+    res.header("Access-Control-Allow-Origin", "*");
+    res.send('');
   }
 
   else
@@ -55,11 +57,11 @@ else
     if(user)
     {
 
-        user.settings.ttn.push(JSON.parse(req.body.body).ttn);
-        user.save(function(err){
+      user.settings.ttn.push(JSON.parse(req.body.body).ttn);
+      user.save(function(err){
         if(err)
           throw err;
-        });
+      });
     }
     
   });
@@ -67,17 +69,17 @@ else
 })
 
 .post('/popTtn',function(req,res){
-    User.findOne({'username': 'siffogh'}, function(err,user){
+  User.findOne({'username': 'siffogh'}, function(err,user){
     if(user)
     {
       var i = user.settings.ttn.indexOf(JSON.parse(req.body.body).ttn);
       user.settings.ttn.splice(i,1);
       user.save(function(err){
-      if(err)
-        throw err;
+        if(err)
+          throw err;
       });
     }
-      
+
   });
   console.log("Pop TTN: " + JSON.parse(req.body.body).ttn);
 })
@@ -90,30 +92,30 @@ else
       res.json({currentLoc: user.settings.currentLocation, lat: user.settings.homeAddress.lat, lng: user.settings.homeAddress.lng, arr: user.settings.ttn});
     }
   });
- })
+})
 
 .post('/setLocation',function(req,res){
   console.log('Updating User Location ...');
   User.findOne({'username': 'siffogh'}, function(err,user){
     if(user)
     {
-        if(JSON.parse(req.body.body).current == 't')
-        {
-          console.log('Current Location True');
-          user.settings.currentLocation = true;
-        }
-        
-        else
-          {
-            console.log('Current Location False');
-            user.settings.currentLocation = false;
-          }
-        user.settings.homeAddress.lat = JSON.parse(req.body.body).lat;
-        user.settings.homeAddress.lng = JSON.parse(req.body.body).lng;
-        user.save(function(err){
+      if(JSON.parse(req.body.body).current == 't')
+      {
+        console.log('Current Location True');
+        user.settings.currentLocation = true;
+      }
+
+      else
+      {
+        console.log('Current Location False');
+        user.settings.currentLocation = false;
+      }
+      user.settings.homeAddress.lat = JSON.parse(req.body.body).lat;
+      user.settings.homeAddress.lng = JSON.parse(req.body.body).lng;
+      user.save(function(err){
         if(err)
           throw err;
-        });
+      });
     }
     
   });
@@ -153,17 +155,17 @@ else
 })
 .post('/disableCurrentLoc',function(req,res){
  console.log('Current Location False');
-  User.findOne({'username': 'siffogh'}, function(err,user){
-    if(user)
-    {
-        user.settings.currentLocation = false;
-        user.save(function(err){
-        if(err)
-          throw err;
-        });
-    }
-    
-  });
+ User.findOne({'username': 'siffogh'}, function(err,user){
+  if(user)
+  {
+    user.settings.currentLocation = false;
+    user.save(function(err){
+      if(err)
+        throw err;
+    });
+  }
+
+});
 })
 .get('/getBusInfo',function(req,res){
   console.log('Getting Bus information ...');
@@ -175,7 +177,8 @@ else
       res.json({username: driver.username, fullName: driver.fullName, phone: driver.phone});
     }
   });
- })
+})
+
 .post('/updateBusInfo',function(req,res){
   console.log('Updateing Bus information ...');
   Driver.findOne({_id: '54b1375d20fb86f80bdb32e1'}, function(err,driver){
@@ -190,6 +193,78 @@ else
         console.log('Bus information updated');
       });
     }
+  });
+})
+
+.post('/startBusTrip',function(req,res){
+  console.log('Starting New Bus Trip ...');
+
+  Trip.findOne({'active': false},function(err,trip){
+    if(trip)
+    {
+      console.log('Trip Found');
+      trip.active = true;
+      trip.direction = JSON.parse(req.body.body).direction;
+      User.findOne({'username': 'siffogh'}, function(err,user){
+        if(user)
+        {
+          trip.user = user._id;
+          var notif = new Notification();
+          notif.date = new Date();
+          notif.content.text = 'The Bus just started a trip to pick up students';
+          notif.content.img = 'arrive.jpg';
+          notif.save(function(err){
+           if(err)
+             throw err;
+         user.notifications.push(notif._id);
+         user.save(function(err){
+          if(err)
+            throw err;
+          console.log('notification pushed');
+        });
+          });
+
+       }
+     });
+          Driver.findOne({_id: '54b1375d20fb86f80bdb32e1'}, function(err,driver){
+            if(driver)
+            {
+              trip.driver = driver._id;
+            }
+          });
+
+          trip.save(function(err){
+            if(err)
+              throw err;
+            res.header("Access-Control-Allow-Origin", "*");
+            res.send('');
+          });
+        }
+      });
+    })
+
+.post('/cancelBusTrip',function(req,res){
+  console.log('Canceling trip ...');
+  Trip.findOne({'active': 'true'}, function(err,trip){
+    if(trip)
+    { 
+      trip.active = false;
+      trip.save(function(err){
+        if(err)
+          throw err;
+      });
+    }
+  });
+})
+
+.post('/delayBusTrip',function(req,res){
+  console.log('Canceling trip ...');
+  Trip.findOne({'active': true}, function(err,trip){
+    trip.delay = JSON.parse(req.body.body).delay;
+    trip.save(function(err){
+      if(err)
+        throw err;
+    });
   });
 });
 
