@@ -10,21 +10,85 @@ var destination = '25.3120502,55.4927023';
 var origin;
 var str; //connection string to Google Distance Matrix
 var check = false; //check if new updates
+var newNotif = false;
+var ntext='', nimg='', ndate='';
 app.post('/post',function(req,res){
   console.log('Getting post from Bus and checking if new updates...');
   if( (lat != JSON.parse(req.body.body).lat) || (longi != JSON.parse(req.body.body).longi) )
   {  
     console.log('We have new updates');
-    check = true;
+    check = true;file:///C:/Users/Sifeddine/Desktop/ajax/index.html
     lat = JSON.parse(req.body.body).lat;
     longi = JSON.parse(req.body.body).longi;
+    if(lat == 25.2180035 && longi == 55.4099200)
+    {
+      User.findOne({'username': 'siffogh'}, function(err,user){
+        if(user)
+        {
+          var notif = new Notification();
+          ndate = notif.date = new Date();
+          ntxt = notif.content.text = 'The Bus is arriving in 2 min';
+          nimg = notif.content.img = 'arrive.jpg';
+          notif.save(function(err){
+           if(err)
+             throw err;
+           user.notifications.push(notif._id);
+           user.save(function(err){
+            if(err)
+              throw err;
+            console.log('notification pushed');
+          });
+         });
+          
+
+        }
+      });
+    }
+
+    if(lat == 25.2194012&& longi == 55.4084609)
+    {
+      newNotif = true;
+      Trip.findOne({'active': 'true'}, function(err,trip){
+        if(trip)
+        { 
+          trip.active = false;
+          trip.save(function(err){
+            if(err)
+              throw err;
+          });
+        }
+      });
+      User.findOne({'username': 'siffogh'}, function(err,user){
+        if(user)
+        {
+          var notif = new Notification();
+          notif.date = new Date();
+          notif.content.text = 'The Bus is waiting outside';
+          notif.content.img = 'arrive.jpg';
+          notif.save(function(err){
+           if(err)
+             throw err;
+           user.notifications.push(notif._id);
+           user.save(function(err){
+            if(err)
+              throw err;
+            console.log('notification pushed');
+          });
+         });
+          
+        }
+      });
+    }
     origin = '' + lat + ',' + longi;
     console.log('lat:'+lat+' lng: '+longi);
     var str = 'https://maps.googleapis.com/maps/api/distancematrix/json?origins='+origin+'&destinations='+destination+'&mode=driving&key='+key;
     request(str,function(error,response,body){
-      if(!error)
-        console.log(JSON.parse(body).rows[0].elements[0].duration.text + ' to destination');
-    });
+     if(!error)
+     {
+      console.log(JSON.parse(body).rows[0].elements[0].duration.text + ' to destination');
+    }
+
+  });
     res.header("Access-Control-Allow-Origin", "*");
     res.send('');
   }
@@ -37,12 +101,23 @@ app.post('/post',function(req,res){
   
 })
 .get('/get',function(req,res){
+   newNotif = false;
   console.log('Getting ask request from Client and checking if new updates to be sent ...');
   res.header("Access-Control-Allow-Origin", "*");
 if(check) //only responds to client if new updates
 {
+   User.findOne({'username': 'siffogh'}).populate('notifications').sort({ "notifications.date" : -1} ).exec(function(err,user){
   console.log('Responding to Client with new updates');
-  res.json({lat: lat, longi: longi});
+  user.notifications.forEach(function(notif,index){
+    if(! notif.checked)
+      newNotif = true;
+  });
+  
+   console.log('**************'+newNotif);
+   res.json({lat: lat, longi: longi, newNotif: newNotif});
+  });
+  
+
 }
 else
 {
@@ -123,7 +198,7 @@ else
 })
 
 .get('/getNotifications',function(req,res){
-  User.findOne({'username': 'siffogh'}).populate('notifications').exec(function(err,user){
+  User.findOne({'username': 'siffogh'}).populate('notifications').sort({ "notifications.date" : -1} ).exec(function(err,user){
 
     if(user)
     {
@@ -198,50 +273,54 @@ else
 
 .post('/startBusTrip',function(req,res){
   console.log('Starting New Bus Trip ...');
+  newNotif = true;
 
   Trip.findOne({'active': false},function(err,trip){
     if(trip)
     {
+
       console.log('Trip Found');
       trip.active = true;
       trip.direction = JSON.parse(req.body.body).direction;
       User.findOne({'username': 'siffogh'}, function(err,user){
         if(user)
         {
+          console.log('Trip User found');
           trip.user = user._id;
           var notif = new Notification();
-          notif.date = new Date();
-          notif.content.text = 'The Bus just started a trip to pick up students';
-          notif.content.img = 'arrive.jpg';
+          ndate = notif.date = new Date();
+          ntext = notif.content.text = 'The Bus just started a trip to pick up students';
+          nimg = notif.content.img = 'arrive.jpg';
           notif.save(function(err){
            if(err)
              throw err;
-         user.notifications.push(notif._id);
-         user.save(function(err){
-          if(err)
-            throw err;
-          console.log('notification pushed');
-        });
-          });
-
-       }
-     });
-          Driver.findOne({_id: '54b1375d20fb86f80bdb32e1'}, function(err,driver){
-            if(driver)
-            {
-              trip.driver = driver._id;
-            }
-          });
-
-          trip.save(function(err){
+           user.notifications.push(notif._id);
+           user.save(function(err){
             if(err)
               throw err;
-            res.header("Access-Control-Allow-Origin", "*");
-            res.send('');
+            console.log('notification pushed');
           });
+         });
+
         }
       });
-    })
+      Driver.findOne({_id: '54b1375d20fb86f80bdb32e1'}, function(err,driver){
+        if(driver)
+        {
+          trip.driver = driver._id;
+        }
+      });
+
+      trip.save(function(err){
+        if(err)
+          throw err;
+        res.header("Access-Control-Allow-Origin", "*");
+        res.send('');
+
+      });
+    }
+  });
+})
 
 .post('/cancelBusTrip',function(req,res){
   console.log('Canceling trip ...');
@@ -269,3 +348,5 @@ else
 });
 
 }
+
+
